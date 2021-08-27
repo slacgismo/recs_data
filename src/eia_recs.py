@@ -111,7 +111,7 @@ class HousingCharacteristics:
         self.released_on = datetime.datetime.strptime(self.book['data']['A1'].value.split("\n")[0].split(":")[1].strip(),"%B %Y")
         self.revised_on = datetime.datetime.strptime(self.book['data']['A1'].value.split("\n")[1].split(":")[1].strip(),"%B %Y")
 
-    def find(self,sheet,row=[],column=[]):
+    def find(self,sheet,row=None,column=None):
         """Obtain a value in a housing characteristics table
 
         PARAMETERS
@@ -170,6 +170,10 @@ class Microdata(pandas.DataFrame):
 import unittest
 
 class _test(unittest.TestCase):
+
+    def test_hc1_1_0(self):
+        hc = HousingCharacteristics(table="1.1")
+        self.assertEqual(hc.find('data'),[['total', 'fuel-used', 'electric-end-use', 'natural-gas-end-use', 'wood-end-use', 'fuel-oil-end-use'], ['total', 'unit-type']])
 
     def test_hc1_1_1(self):
         hc = HousingCharacteristics(table="1.1")
