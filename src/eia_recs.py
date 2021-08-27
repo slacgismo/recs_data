@@ -8,14 +8,18 @@ import requests
 import datetime
 import pandas
 
+microdata_url = "https://www.eia.gov/consumption/residential/data/2015/csv/recs2015_public_v4.csv"
+hc_baseurl = "https://www.eia.gov/consumption/residential/data/2015/hc/"
+
 class HousingCharacteristics:
     """Housing characteristics class implementation"""
-    baseurl = "https://www.eia.gov/consumption/residential/data/2015/hc/"
+    
     table_sources = {
         "2015" : {
             "hc1.1" : "Fuel use and end-uses by housing unit type",
         }
     }
+
     table_structure = {
         "hc1.1" : {
             "units" : 1e6,
@@ -98,7 +102,7 @@ class HousingCharacteristics:
         self.name = "hc"+table
         xlsname = f"{self.name}.xlsx"
         if not os.path.exists(xlsname):
-            req = requests.get(f"{self.baseurl}{dataset}.xlsx")
+            req = requests.get(f"{hc_baseurl}{dataset}.xlsx")
             if req.status_code != 200:
                 return None
             with open(xlsname,"wb") as f:
@@ -143,16 +147,20 @@ class HousingCharacteristics:
         try:
             return float(book[f"{columns}{rows}"].value * self.table_structure[self.name]["units"])
         except:
-            return rows,columns
+            if type(rows) is dict:
+                rows = list(rows.keys())
+            if type(columns) is dict:
+                columns = list(columns.keys())
+            return [rows,columns]
 
 class Microdata(pandas.DataFrame):
-    microdata_url = "https://www.eia.gov/consumption/residential/data/2015/csv/recs2015_public_v4.csv"
     """RECS Microdata class implementation"""
+
     def __init__(self):
         """Data frame constructor"""
         csvname = f"hc_raw.csv"
         if not os.path.exists(csvname):
-            req = requests.get(self.microdata_url)
+            req = requests.get(microdata_url)
             if req.status_code != 200:
                 return None
             with open(csvname,"wb") as f:
@@ -163,10 +171,20 @@ import unittest
 
 class _test(unittest.TestCase):
 
-    def test_hc1_1(self):
+    def test_hc1_1_1(self):
         hc = HousingCharacteristics(table="1.1")
         self.assertEqual(hc.find('data',['total'],['total']),118.2e6)
+
+    def test_hc1_1_2(self):
+        hc = HousingCharacteristics(table="1.1")
         self.assertEqual(hc.find('data',['total'],['unit-type','single-family-detached']),73.9e6)
+
+    def test_hc1_1_3(self):
+        hc = HousingCharacteristics(table="1.1")
+        self.assertEqual(hc.find('data',['electric-end-use','space-heating'],['total']),[['total', 'main', 'secondary'], 'B'])
+
+    def test_hc1_1_4(self):
+        hc = HousingCharacteristics(table="1.1")
         self.assertEqual(hc.find('data',['fuel-used','natural-gas'],['total']),68.6e6)
 
     def test_microdata(self):
