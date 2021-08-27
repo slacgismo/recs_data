@@ -114,5 +114,5 @@ dmypy.json
 .pyre/
 
 # local ignores
-hc*.xlsx
+hc*.*
 .DS_Store

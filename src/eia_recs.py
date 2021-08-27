@@ -1,18 +1,21 @@
+"""EIA RECS data accessor
+
+This package provides access to the EIA RECS data
+"""
 import os, sys
 import openpyxl
 import requests
 import datetime
 import pandas
 
-baseurl = "https://www.eia.gov/consumption/residential/data/2015/hc/"
-microdata_url = "https://www.eia.gov/consumption/residential/data/2015/csv/recs2015_public_v4.csv"
-sources = {
-    "2015" : {
-        "hc1.1" : "Fuel use and end-uses by housing unit type",
-    }
-}
-
 class HousingCharacteristics:
+    """Housing characteristics class implementation"""
+    baseurl = "https://www.eia.gov/consumption/residential/data/2015/hc/"
+    table_sources = {
+        "2015" : {
+            "hc1.1" : "Fuel use and end-uses by housing unit type",
+        }
+    }
     table_structure = {
         "hc1.1" : {
             "units" : 1e6,
@@ -86,10 +89,16 @@ class HousingCharacteristics:
     }
 
     def __init__(self,table):
+        """Construct a housing characteristics from a RECS table
+
+        PARAMETERS
+
+            table (str) - The RECS table number (e.g., "1.1")
+        """
         self.name = "hc"+table
         xlsname = f"{self.name}.xlsx"
         if not os.path.exists(xlsname):
-            req = requests.get(f"{baseurl}{dataset}.xlsx")
+            req = requests.get(f"{self.baseurl}{dataset}.xlsx")
             if req.status_code != 200:
                 return None
             with open(xlsname,"wb") as f:
@@ -99,6 +108,22 @@ class HousingCharacteristics:
         self.revised_on = datetime.datetime.strptime(self.book['data']['A1'].value.split("\n")[1].split(":")[1].strip(),"%B %Y")
 
     def find(self,sheet,row=[],column=[]):
+        """Obtain a value in a housing characteristics table
+
+        PARAMETERS
+
+            sheet (str) - specify the sheet, e.g., "data" or "rse"
+
+            row (str or list of str) - specify the column to find
+
+            column (int or list of str) - specify the row to find
+
+        RETURNS
+
+            (float) - the value if found
+
+            (row data, column data) - the row and column specifications if the value is not found
+        """
         book = self.book[sheet]
         rows = self.table_structure[self.name]["rows"]
         columns = self.table_structure[self.name]["columns"]
@@ -116,16 +141,18 @@ class HousingCharacteristics:
             else:
                 column = column[0]
         try:
-            return book[f"{columns}{rows}"].value * self.table_structure[self.name]["units"]
+            return float(book[f"{columns}{rows}"].value * self.table_structure[self.name]["units"])
         except:
             return rows,columns
 
 class Microdata(pandas.DataFrame):
-
+    microdata_url = "https://www.eia.gov/consumption/residential/data/2015/csv/recs2015_public_v4.csv"
+    """RECS Microdata class implementation"""
     def __init__(self):
+        """Data frame constructor"""
         csvname = f"hc_raw.csv"
         if not os.path.exists(csvname):
-            req = requests.get(microdata_url)
+            req = requests.get(self.microdata_url)
             if req.status_code != 200:
                 return None
             with open(csvname,"wb") as f:
