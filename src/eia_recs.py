@@ -156,6 +156,65 @@ class HousingCharacteristics:
 class Microdata(pandas.DataFrame):
     """RECS Microdata class implementation"""
 
+    regions = {
+        "northeast": {
+            "id" : 1,
+            "divisions" : {
+                "new-england" : {
+                    "id" : 1,
+                    "states" : {
+                        "CT" : 9,
+                        "ME" : 23,
+                        "MA" : 25,
+                        "NH" : 33,
+                        "RI" : 44,
+                        "VT" : 50,
+                    },
+                },
+                "middle-atlantic" : {
+                    "id" : 2,
+                    "states" : {
+                        "NJ" : 34,
+                        "NY" : 36,
+                        "PA" : 42,
+                    },                  
+                },
+            },
+        },
+        # "midwest" : {
+        #     "id" : N,
+        #     "divisions" : {
+        #         "X" : {
+        #             "id" : M,
+        #             "states" : {
+        #                 "Y" : Z,
+        #             },
+        #         },
+        #     },
+        # },
+        # "south" : {
+        #     "id" : N,
+        #     "divisions" : {
+        #         "X" : {
+        #             "id" : M,
+        #             "states" : {
+        #                 "Y" : Z,
+        #             },
+        #         },
+        #     },
+        # },
+        # "west" : {
+        #     "id" : N,
+        #     "divisions" : {
+        #         "X" : {
+        #             "id" : M,
+        #             "states" : {
+        #                 "Y" : Z,
+        #             },
+        #         },
+        #     },
+        # },
+    }
     def __init__(self):
         """Data frame constructor"""
         csvname = f"hc_raw.csv"
@@ -166,6 +225,33 @@ class Microdata(pandas.DataFrame):
             with open(csvname,"wb") as f:
                 f.write(req.content)
         pandas.DataFrame.__init__(self,pandas.read_csv(csvname))
+    
+    @classmethod
+    def get_fips(cls,statecodes=[]):
+        """Get FIPS code to a state or states"""
+        result = {}
+        for region, divisions in cls.regions.items():
+            for division, states in divisions["divisions"].items():
+                for state, fips in states["states"].items():
+                    if not statecodes or state == statecodes or state in statecodes:
+                        result[state] = dict(region=region,division=division,fips=fips)
+        if type(statecodes) == str:
+            return result[list(result.keys())[0]]
+        else:
+            return result
+
+    @classmethod
+    def codes(cls,region,division=None,state=None):
+        """Get census region, division, and fips codes"""
+        if not division:
+            return {"region" : cls.regions[region]["id"]}
+        elif not state:
+            return {"region" : cls.regions[region]["id"], 
+                "division" : cls.regions[region]["divisions"][division]["id"]}
+        else:
+            return {"region" : cls.regions[region]["id"], 
+                "division" : cls.regions[region]["divisions"][division]["id"], 
+                "fips" : cls.regions[region]["divisions"][division]["states"][state]}
 
 import unittest
 
@@ -195,6 +281,18 @@ class _test(unittest.TestCase):
         md = Microdata()
         self.assertEqual(md["LPXBTU"][0],91.33)
 
+    def test_microdata_fips(self):
+        fips = Microdata.get_fips("NY")
+        self.assertEqual(fips["region"],"northeast") 
+        self.assertEqual(fips["division"],"middle-atlantic") 
+        self.assertEqual(Microdata.regions[fips["region"]]["id"],1) 
+        self.assertEqual(Microdata.regions[fips["region"]]["divisions"][fips["division"]]["id"],2) 
+        self.assertEqual(Microdata.regions[fips["region"]]["divisions"][fips["division"]]["states"]["NY"],36) 
+
+    def test_microdata_code(self):
+        self.assertEqual(Microdata.codes("northeast")["region"],1)
+        self.assertEqual(Microdata.codes("northeast","middle-atlantic")["division"],2)
+        self.assertEqual(Microdata.codes("northeast","middle-atlantic","NY")["fips"],36)
 
 if __name__ == "__main__":
     unittest.main()

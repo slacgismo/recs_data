@@ -1,0 +1,6 @@
+#begin python
+import eia_recs
+recs = eia_recs.Microdata().set_index(["REGIONC","DIVISION"])
+#end
+
+#print ${PYTHON eia_recs.Microdata.get_fips()}
